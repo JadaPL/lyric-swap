@@ -1,0 +1,252 @@
+<title>Lyric Swap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column like a rehearsal score — steps run top to bottom, each line of lyrics is a card you sign off. */
+:root {
+  --paper: #f5f6f3;
+  --sheet: #ffffff;
+  --ink: #1b1d24;
+  --ink-soft: #565b68;
+  --rule: #d9dcd6;
+  --rule-strong: #b9bdb5;
+  --accent: #2d4a8a;       /* blue rehearsal pencil */
+  --accent-ink: #ffffff;
+  --accent-wash: #e6ecf8;
+  --ok: #2f7d4f;  --ok-wash: #e3f2e8;
+  --warn: #9a6200; --warn-wash: #fbefd6;
+  --need: #b3261e; --need-wash: #fbe5e3;
+  --chip: #eef0ec;
+  --shadow: 0 1px 2px rgba(20, 24, 32, .06), 0 2px 10px rgba(20, 24, 32, .05);
+  --f-display: "Old Standard TT", "Century Schoolbook", "Times New Roman", serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #15171c; --sheet: #1d2027; --ink: #e9eaee; --ink-soft: #a3a8b5; --rule: #2e323c; --rule-strong: #444a57;
+    --accent: #8fa8e8; --accent-ink: #10131a; --accent-wash: #232c44;
+    --ok: #74c493; --ok-wash: #1b2e23; --warn: #e2b155; --warn-wash: #33291a; --need: #f08b83; --need-wash: #3a1f1d;
+    --chip: #262a33; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 12px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #15171c; --sheet: #1d2027; --ink: #e9eaee; --ink-soft: #a3a8b5; --rule: #2e323c; --rule-strong: #444a57;
+  --accent: #8fa8e8; --accent-ink: #10131a; --accent-wash: #232c44;
+  --ok: #74c493; --ok-wash: #1b2e23; --warn: #e2b155; --warn-wash: #33291a; --need: #f08b83; --need-wash: #3a1f1d;
+  --chip: #262a33; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 12px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: flex; flex-direction: column; gap: 28px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .005em; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.05; }
+h2 { font-size: 24px; line-height: 1.2; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 13px; }
+button, select, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header: a staff-line rule under the title */
+.mast { display: flex; flex-direction: column; gap: 10px; }
+.staff { height: 25px; background: repeating-linear-gradient(to bottom, var(--rule-strong) 0 1px, transparent 1px 6px); opacity: .7; border-radius: 1px; }
+.mast .lede { max-width: 64ch; color: var(--ink-soft); }
+
+/* steps */
+.steps { display: flex; gap: 6px; flex-wrap: wrap; list-style: none; padding: 0; margin: 0; }
+.steps li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--chip); color: var(--ink-soft); font-size: 13px; font-weight: 500; }
+.steps li b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--sheet); font-family: var(--f-display); font-weight: 700; font-size: 13px; }
+.steps li[aria-current="step"] { background: var(--accent); color: var(--accent-ink); }
+.steps li[aria-current="step"] b { color: var(--accent); }
+.steps li.done b { background: var(--ok); color: #fff; }
+
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow); padding: 22px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (max-width: 520px) { .panel { padding: 16px; } }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.grow { flex: 1 1 auto; min-width: 0; }
+
+/* drop zones */
+.drops { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .drops { grid-template-columns: 1fr; } }
+.drop { position: relative; border: 1.5px dashed var(--rule-strong); border-radius: var(--r); padding: 20px; display: flex; flex-direction: column; gap: 8px; min-height: 150px; justify-content: center; background: var(--paper); transition: border-color .15s, background .15s; min-width: 0; }
+.drop.over { border-color: var(--accent); background: var(--accent-wash); }
+.drop.filled { border-style: solid; border-color: var(--ok); background: var(--sheet); }
+.drop input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop .kind { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.drop .name { font-weight: 600; overflow-wrap: anywhere; }
+.drop .hint { font-size: 13px; color: var(--ink-soft); }
+details.paste summary { cursor: pointer; font-size: 13px; color: var(--accent); }
+details.paste textarea { width: 100%; min-height: 120px; margin-top: 8px; border: 1px solid var(--rule); border-radius: 8px; padding: 10px; background: var(--sheet); font-family: var(--f-mono); font-size: 13px; }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
+select, .input { border: 1px solid var(--rule-strong); border-radius: 8px; padding: 8px 10px; background: var(--sheet); min-width: 0; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; max-height: 240px; }
+table.peek { border-collapse: collapse; font-size: 13px; width: 100%; }
+table.peek td, table.peek th { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; white-space: pre-wrap; min-width: 140px; }
+table.peek th { position: sticky; top: 0; background: var(--chip); font-weight: 600; }
+table.peek .c-orig { background: color-mix(in srgb, var(--accent-wash) 60%, transparent); }
+table.peek .c-new { background: color-mix(in srgb, var(--ok-wash) 70%, transparent); }
+
+.btn { border: 1px solid var(--rule-strong); background: var(--sheet); border-radius: 8px; padding: 8px 14px; font-weight: 600; font-size: 14px; display: inline-flex; gap: 8px; align-items: center; }
+.btn:hover { border-color: var(--ink-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--accent); padding-inline: 8px; }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+
+.progress { display: flex; flex-direction: column; gap: 6px; }
+.bar { height: 6px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+/* summary */
+.tally { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+.tally button { text-align: left; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: var(--paper); display: flex; flex-direction: column; gap: 2px; }
+.tally button[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tally .n { font-family: var(--f-display); font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tally .need .n { color: var(--need); } .tally .chk .n { color: var(--warn); } .tally .ok .n { color: var(--ok); }
+
+.notice { border-radius: 8px; padding: 12px 14px; font-size: 14px; display: flex; gap: 10px; align-items: flex-start; }
+.notice.info { background: var(--accent-wash); }
+.notice.warn { background: var(--warn-wash); }
+.notice.need { background: var(--need-wash); }
+
+/* line cards */
+.cards { display: flex; flex-direction: column; gap: 14px; }
+.card { border: 1px solid var(--rule); border-left: 4px solid var(--rule-strong); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--sheet); min-width: 0; }
+.card.s-need { border-left-color: var(--need); }
+.card.s-check { border-left-color: var(--warn); }
+.card.s-ok { border-left-color: var(--ok); }
+.card.s-keep { border-left-color: var(--rule-strong); }
+.card header { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--ink-soft); white-space: nowrap; }
+.pill.need { background: var(--need-wash); color: var(--need); }
+.pill.check { background: var(--warn-wash); color: var(--warn); }
+.pill.ok { background: var(--ok-wash); color: var(--ok); }
+.where { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.why { font-size: 14px; }
+.crop { overflow-x: auto; border-radius: 6px; background: #fff; border: 1px solid var(--rule); }
+.crop canvas { display: block; height: auto; max-width: none; }
+.syl-grid { display: flex; flex-wrap: wrap; gap: 4px; overflow-x: auto; }
+.syl { display: flex; flex-direction: column; border: 1px solid var(--rule); border-radius: 6px; min-width: 40px; text-align: center; font-size: 13px; overflow: hidden; }
+.syl .o { padding: 2px 6px; color: var(--ink-soft); background: var(--chip); font-family: var(--f-display); }
+.syl .n { padding: 2px 6px; font-weight: 600; font-family: var(--f-display); font-size: 14px; min-height: 22px; }
+.syl .n.empty { color: var(--ink-soft); font-weight: 400; }
+.syl.extra { border-color: var(--need); border-style: dashed; }
+.syl.extra .o { background: var(--need-wash); color: var(--need); }
+.edit { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.edit input { flex: 1 1 280px; font-family: var(--f-mono); font-size: 14px; }
+.count { font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.count.bad { color: var(--need); } .count.good { color: var(--ok); }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.claude-note { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+.help { font-size: 13px; color: var(--ink-soft); }
+kbd { font-family: var(--f-mono); font-size: 12px; background: var(--chip); border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; }
+
+/* preview */
+.pages { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+.page { width: 100%; max-width: 820px; background: #fff; border: 1px solid var(--rule); box-shadow: var(--shadow); border-radius: 4px; position: relative; aspect-ratio: var(--ar, 0.7727); }
+.page canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
+.page .pno { position: absolute; top: 8px; right: 10px; font-size: 11px; color: #555; background: rgba(255,255,255,.85); padding: 1px 6px; border-radius: 99px; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--sheet); padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.sticky { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); padding-block: 10px; margin-block: -10px; }
+.foot { font-size: 12px; color: var(--ink-soft); }
+.example-tag { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--warn); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <h1>Lyric Swap</h1>
+    <div class="staff" aria-hidden="true"></div>
+    <p class="lede">Upload a score with vocal lyrics and a spreadsheet of new words. You get the same sheet music back with the new lyrics printed under the same notes. Any line that doesn't fit cleanly stops and asks you first.</p>
+  </header>
+
+  <ol class="steps" id="steps">
+    <li id="st-1" aria-current="step"><b>1</b>Upload</li>
+    <li id="st-2"><b>2</b>Review lines</li>
+    <li id="st-3"><b>3</b>Preview &amp; download</li>
+  </ol>
+
+  <!-- STEP 1 -->
+  <section class="panel" id="step1">
+    <div class="drops">
+      <div class="drop" id="drop-score">
+        <span class="kind">Sheet music</span>
+        <span class="name" id="score-name">Drop a PDF or image here, or click to choose</span>
+        <span class="hint" id="score-hint">PDF exported from MuseScore, Finale, Sibelius, Dorico or Noteflight works best. Scans and photos (PDF, JPG, PNG) also work, with more checking.</span>
+        <input type="file" id="file-score" accept=".pdf,application/pdf,image/png,image/jpeg,image/webp" multiple aria-label="Choose sheet music">
+      </div>
+      <div class="drop" id="drop-lyrics">
+        <span class="kind">New lyrics</span>
+        <span class="name" id="lyrics-name">Drop a spreadsheet or document here, or click to choose</span>
+        <span class="hint" id="lyrics-hint">CSV, Excel, Google Sheets export, Word or plain text. Best: one column with the original line and one with the new line.</span>
+        <input type="file" id="file-lyrics" accept=".csv,.tsv,.txt,.xlsx,.xls,.ods,.docx,text/csv,text/plain" aria-label="Choose lyrics file">
+      </div>
+    </div>
+    <details class="paste" id="paste-box">
+      <summary>Or paste the lyrics instead</summary>
+      <textarea id="paste-text" placeholder="Original line[TAB]New line&#10;From Bottle Alley to the Harbor[TAB]From Lowell Lec Hall to the SOCH stoop"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn sm" id="paste-use">Use pasted lyrics</button><span class="help">Separate the two columns with a tab or a <kbd>|</kbd>.</span></div>
+    </details>
+    <div id="colpick" hidden>
+      <div class="cols">
+        <label class="field">Original lyrics column<select id="col-orig"></select></label>
+        <label class="field">New lyrics column<select id="col-new"></select></label>
+        <label class="field">First row of lyrics<select id="col-start"></select></label>
+      </div>
+      <div class="tablewrap" style="margin-top:12px"><table class="peek" id="peek"></table></div>
+    </div>
+    <div class="notice warn" id="step1-msg" hidden></div>
+    <div class="row">
+      <button class="btn primary" id="go-match" disabled>Match lyrics to the score</button>
+      <span class="help" id="go-help">Add both files to continue.</span>
+    </div>
+    <div class="progress" id="prog" hidden><div class="bar"><i id="prog-bar"></i></div><span class="small muted" id="prog-text"></span></div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="panel" id="step2" hidden>
+    <div class="row"><h2 class="grow">Review lines</h2><button class="btn ghost" id="back-1">Change files</button></div>
+    <div class="tally" id="tally"></div>
+    <div class="notice info" id="claude-box" hidden>
+      <div class="grow">
+        <strong>Let Claude fit the tricky lines.</strong>
+        <p class="small">Claude splits the new words into sung syllables and suggests how to fit lines that have too many or too few syllables. You approve every change. This uses your Claude usage.</p>
+        <div class="row" style="margin-top:8px"><button class="btn sm primary" id="claude-all">Fit flagged lines with Claude</button><button class="btn sm" id="claude-every">Check every line's syllables</button><span class="small" id="claude-status"></span></div>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="row sticky">
+      <button class="btn primary" id="go-build">Build the new score</button>
+      <span class="help" id="build-help"></span>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="panel" id="step3" hidden>
+    <div class="row"><h2 class="grow">Preview &amp; download</h2><button class="btn ghost" id="back-2">Back to review</button></div>
+    <div class="notice warn" id="build-warn" hidden></div>
+    <div class="row sticky">
+      <div class="seg" role="group" aria-label="Show"><button id="v-new" aria-pressed="true">New lyrics</button><button id="v-old" aria-pressed="false">Original</button></div>
+      <span class="grow"></span>
+      <button class="btn primary" id="dl-pdf">Download PDF</button>
+      <button class="btn" id="dl-txt">Lyrics as text</button>
+    </div>
+    <p class="small muted" id="dl-msg"></p>
+    <div class="pages" id="pages"></div>
+  </section>
+
+  <p class="foot">Everything runs in your browser. Your files aren't uploaded anywhere unless you ask Claude for help, and then only the lyric text (or, for scans, images of the lyric lines) is sent.</p>
+</div>
