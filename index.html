@@ -2183,8 +2183,14 @@ async function imagesToPdf(files) {
 }
 
 /* ---------- analysis ---------- */
+// On a regular web host pdf.js can fetch its standard fonts (for PDFs that don't embed them);
+// inside a Claude artifact the page can't fetch, so it falls back to drawing without them.
+const PDFJS_ASSETS = window.claude ? {} : {
+  standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/',
+  cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/', cMapPacked: true,
+};
 function loadPdfjs(bytes) {
-  return pdfjsLib.getDocument({ data: bytes.slice(), disableFontFace: true, isEvalSupported: false, useSystemFonts: false }).promise;
+  return pdfjsLib.getDocument({ data: bytes.slice(), disableFontFace: true, isEvalSupported: false, useSystemFonts: false, ...PDFJS_ASSETS }).promise;
 }
 $('go-match').onclick = async () => {
   $('go-match').disabled = true; flash('step1-msg', '');
